@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
 include $(TOPDIR)/rules.mk
+include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=batman-adv
 PKG_VERSION:=2022.3
@@ -17,7 +18,7 @@ PKG_LICENSE_FILES:=LICENSES/preferred/GPL-2.0 LICENSES/preferred/MIT
 
 PKG_BUILD_PARALLEL:=1
 
-STAMP_CONFIGURED_DEPENDS := $(STAGING_DIR)/usr/include/mac80211-backport/backport/autoconf.h
+STAMP_CONFIGURED_DEPENDS := $(LINUX_DIR)/include/generated/autoconf.h
 
 PKG_CONFIG_DEPENDS += \
 	CONFIG_BATMAN_ADV_BATMAN_V \
@@ -28,14 +29,13 @@ PKG_CONFIG_DEPENDS += \
 	CONFIG_BATMAN_ADV_DEBUG \
 	CONFIG_BATMAN_ADV_TRACING
 
-include $(INCLUDE_DIR)/kernel.mk
 include $(INCLUDE_DIR)/package.mk
 
 define KernelPackage/batman-adv
   SUBMENU:=Network Support
   TITLE:=B.A.T.M.A.N. Adv
   URL:=https://www.open-mesh.org/
-  DEPENDS:=+BATMAN_ADV_BLA:kmod-lib-crc16 +kmod-lib-crc32c +kmod-cfg80211 +batctl
+  DEPENDS:=+kmod-bridge +BATMAN_ADV_BLA:kmod-lib-crc16 +kmod-lib-crc32c +kmod-cfg80211 +batctl
   FILES:=$(PKG_BUILD_DIR)/net/batman-adv/batman-adv.$(LINUX_KMOD_SUFFIX)
   AUTOLOAD:=$(call AutoProbe,batman-adv)
 endef
@@ -73,16 +73,14 @@ PKG_EXTRA_CFLAGS:= \
 
 NOSTDINC_FLAGS = \
 	$(KERNEL_NOSTDINC_FLAGS) \
+	-I$(LINUX_DIR)/include \
+	-I$(LINUX_DIR)/include/generated \
+	-include $(LINUX_DIR)/include/linux/kconfig.h \
 	-I$(PKG_BUILD_DIR)/net/batman-adv \
-	-I$(STAGING_DIR)/usr/include/mac80211-backport \
-	-I$(STAGING_DIR)/usr/include/mac80211-backport/uapi \
-	-I$(STAGING_DIR)/usr/include/mac80211 \
-	-I$(STAGING_DIR)/usr/include/mac80211/uapi \
-	-I$(PKG_BUILD_DIR)/include/ \
-	-include backport/autoconf.h \
-	-include backport/backport.h \
+	-I$(PKG_BUILD_DIR)/include \
+	-include $(PKG_BUILD_DIR)/compat-include/linux/version.h \
 	-include $(PKG_BUILD_DIR)/compat-hacks.h \
-	-DBATADV_SOURCE_VERSION=\\\"$(PKG_VERSION)-openwrt-$(PKG_RELEASE)\\\"
+	-DBATADV_SOURCE_VERSION=\\\"$(PKG_VERSION)-openwrt-$(PKG_RELEASE)\\\" \
 
 define Build/Compile
 	$(MAKE) $(PKG_JOBS) -C "$(LINUX_DIR)" \
